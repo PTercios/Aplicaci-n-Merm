@@ -1,0 +1,45 @@
+name: Deploy to Google Cloud
+
+# Activar el workflow en cada push a la rama main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    # Define el entorno de ejecución
+    runs-on: ubuntu-latest
+
+    steps:
+    # Paso 1: Descargar el código fuente
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Paso 2: Autenticar con Google Cloud
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+    # Paso 3: Configurar Google Cloud CLI
+    - name: Set up gcloud CLI
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: your-project-id
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+        export_default_credentials: true
+
+    # Paso 4: Construir y publicar las imágenes de Docker
+    - name: Build and Push Docker Images
+      run: |
+        docker build -t gcr.io/your-project-id/backend ./backend
+        docker build -t gcr.io/your-project-id/frontend ./frontend
+        docker push gcr.io/your-project-id/backend
+        docker push gcr.io/your-project-id/frontend
+
+    # Paso 5: Desplegar en Kubernetes
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
