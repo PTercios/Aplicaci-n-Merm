@@ -1,19 +1,27 @@
-# Dockerfile for client
+#docker file Front
 
-# Stage 1: Build react client
-FROM node:14.15.3-alpine3.12
+# Etapa 1: Construir la aplicación React
+FROM node:14.15.3-alpine3.12 as build
 
-# Working directory be app
-WORKDIR /usr/app
+# Establecer el directorio de trabajo
+WORKDIR /usr/src/app
 
+# Copiar archivos necesarios e instalar dependencias
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# copy local files to app folder
+# Copiar el resto del código fuente y construir la aplicación
 COPY . .
+RUN npm run build
 
-EXPOSE 3000
+# Etapa 2: Servir la aplicación con Nginx
+FROM nginx:1.21.0-alpine
 
-CMD ["npm","start"]
+# Copiar los archivos de compilación al directorio predeterminado de Nginx
+COPY --from=build /usr/src/app/build /usr/share/nginx/html
+
+# Exponer el puerto
+EXPOSE 80
+
+# Iniciar Nginx
+CMD ["nginx", "-g", "daemon off;"]
