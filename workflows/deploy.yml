@@ -1,45 +1,50 @@
 name: Deploy to Google Cloud
 
-# Activar el workflow en cada push a la rama main
 on:
   push:
     branches:
-      - main
+      - main # Se ejecuta cuando hay un push en la rama "main"
 
 jobs:
   build-and-deploy:
-    # Define el entorno de ejecución
     runs-on: ubuntu-latest
 
     steps:
-    # Paso 1: Descargar el código fuente
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # 1. Checkout del código fuente
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # Paso 2: Autenticar con Google Cloud
-    - name: Authenticate with Google Cloud
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+      # 2. Configurar Google Cloud SDK
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: '418.0.0' # Versión del SDK, puedes ajustar según necesidad
+          project_id: integral-linker-443601-n2 # ID del proyecto de Google Cloud
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }} # Credenciales de la cuenta de servicio
 
-    # Paso 3: Configurar Google Cloud CLI
-    - name: Set up gcloud CLI
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: your-project-id
-        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
-        export_default_credentials: true
+      # 3. Autenticar Docker con Google Container Registry (GCR)
+      - name: Authenticate Docker with GCR
+        run: gcloud auth configure-docker --quiet
 
-    # Paso 4: Construir y publicar las imágenes de Docker
-    - name: Build and Push Docker Images
-      run: |
-        docker build -t gcr.io/your-project-id/backend ./backend
-        docker build -t gcr.io/your-project-id/frontend ./frontend
-        docker push gcr.io/your-project-id/backend
-        docker push gcr.io/your-project-id/frontend
+      # 4. Construir y subir la imagen del backend
+      - name: Build and Push Backend Image
+        run: |
+          docker build -t gcr.io/integral-linker-443601-n2/backend ./backend
+          docker push gcr.io/integral-linker-443601-n2/backend
 
-    # Paso 5: Desplegar en Kubernetes
-    - name: Deploy to Kubernetes
-      run: |
-        kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/service.yaml
+      # 5. Construir y subir la imagen del frontend
+      - name: Build and Push Frontend Image
+        run: |
+          docker build -t gcr.io/integral-linker-443601-n2/frontend ./frontend
+          docker push gcr.io/integral-linker-443601-n2/frontend
+
+      # 6. Desplegar la aplicación en Kubernetes
+      - name: Deploy to GKE
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          kubectl apply -f k8s/deployment-backend.yaml
+          kubectl apply -f k8s/deployment-frontend.yaml
+          kubectl apply -f k8s/service-backend.yaml
+          kubectl apply -f k8s/service-frontend.yaml
+
