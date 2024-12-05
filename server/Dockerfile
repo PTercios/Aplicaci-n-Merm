@@ -1,22 +1,25 @@
-#  Dockerfile for Node Express Backend api (development)
+#Dockerfile Back
 
+# Utilizar Node.js en un entorno optimizado para producción
 FROM node:14.15.3-alpine3.12
 
-ARG NODE_ENV=development
+# Establecer variable de entorno
+ENV NODE_ENV=production
 
-# Create App Directory
-RUN mkdir -p /usr/src/app
+# Crear directorio de la aplicación
 WORKDIR /usr/src/app
 
-# Install Dependencies
+# Copiar solo los archivos necesarios para instalar dependencias
 COPY package*.json ./
 
-RUN npm install
+# Instalar solo las dependencias de producción
+RUN npm install --production
 
-# Copy app source code
+# Copiar el resto del código fuente
 COPY . .
 
-# Exports
+# Exponer el puerto en el que escucha el servidor
 EXPOSE 8080
 
-CMD ["npm","start"]
+# Comando para iniciar el servidor
+CMD ["node", "server.js"]
